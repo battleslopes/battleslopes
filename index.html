@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Battle-Slopes</title>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+    body { margin:0; min-height:100vh; display:flex; justify-content:center; background:linear-gradient(135deg,#1e3c72,#2a5298); color:white; }
+    .container { max-width:800px; width:90%; padding:30px; text-align:center; }
+    h1 { font-size:3rem; margin-bottom:10px; }
+    .subtitle { font-size:1.1rem; margin-bottom:30px; opacity:0.9; }
+    .card { background:rgba(255,255,255,0.12); padding:25px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.3); max-width:400px; margin:0 auto; }
+    button { width:100%; padding:12px; font-size:1rem; border:none; border-radius:8px; background:#ff9800; color:white; cursor:pointer; margin-top:10px; }
+    button:hover { background:#fb8c00; }
+    input { width:100%; padding:12px; font-size:1rem; border-radius:8px; border:none; margin-top:15px; }
+    .divider { margin:15px 0; font-weight:bold; opacity:0.8; }
+    hr { margin:40px 0; border:1px solid rgba(255,255,255,0.2); }
+    p { text-align:justify; line-height:1.6; }
+    a { color:#ffd54f; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .footer { margin-top:30px; font-size:0.85rem; opacity:0.7; }
+    #grid { display:grid; grid-template-columns: repeat(11, 35px); justify-content:center; margin-top:20px; gap:3px; }
+    .cell { width:35px; height:35px; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:4px; font-size:0.8rem; }
+    .cell.ship { background:#4caf50; } /* Player ship */
+    .cell.hit { background:#f44336; } /* Hit opponent ship */
+    .cell.miss { background:#9e9e9e; } /* Miss */
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>🎯 Battle-Slopes</h1>
+  <p class="subtitle" style="text-align: center;">A Two-Player Math Strategy Game<br>Coordinate Geometry • Slopes • Logic </p>
+
+
+  <!-- Lobby -->
+  <div class="card" id="lobby">
+    <button onclick="createRoom()">Create Room</button>
+    <div class="divider">OR</div>
+    <input type="text" id="roomInput" placeholder="Enter Room Code">
+    <button onclick="joinRoom()">Join Room</button>
+  </div>
+
+  <!-- Game -->
+  <div class="card" id="game" style="display:none;">
+    <p id="statusText">Place your 4 ships</p>
+    <div id="grid"></div>
+    <button onclick="restartGame()" id="restartBtn" style="display:none;">Restart / Rematch</button>
+  </div>
+
+  <hr>
+
+  <p><b>All About Battle-Slopes</b></p>
+  <p>
+    Battle-Slopes is an interactive two-player game where players plot ships on a Cartesian grid
+    and attack by forming linear equations using slope and coordinates.
+  </p>
+
+  <p> The project <b>Battle-Slopes</b> is an interactive, two-player, web-based educational game inspired by the classic <a href="https://en.wikipedia.org/wiki/Battleship" target="_blank">Battleship</a>. Players strategically plot ships on a Cartesian plane and attack by forming linear equations using slope and coordinate pairs. </p>
+
+  <p class="footer">© 2026 Battle-Slopes | Math Meets Strategy</p>
+</div>
+
+<script>
+/* ===================== FIREBASE CONFIG ===================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyAVKLWoek9nvjO2qzUKHwRrMhqpsjaDiG8",
+  authDomain: "battle-slopes.firebaseapp.com",
+  databaseURL: "https://battle-slopes-default-rtdb.firebaseio.com",
+  projectId: "battle-slopes",
+  storageBucket: "battle-slopes.appspot.com",
+  messagingSenderId: "328801882779",
+  appId: "1:328801882779:web:c2037289a355dd3733ec3e",
+  measurementId: "G-0N95P20HTE"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+/* ===================== GAME VARIABLES ===================== */
+let roomCode = null;
+let playerNum = null;
+let myShips = [];
+let opponentShips = [];
+let turn = 1;
+let maxShips = 4;
+let gameStatus = "placing"; // placing -> battle -> finished
+let attackPoints = [];
+
+/* ===================== ROOM FUNCTIONS ===================== */
+function generateRoomCode() {
+  return "BS-" + Math.random().toString(36).substr(2,4).toUpperCase();
+}
+
+function createRoom() {
+  roomCode = generateRoomCode();
+  playerNum = 1;
+  database.ref("rooms/" + roomCode).set({
+  player1: { joined:true, ships:[], hits:[], misses:[] },
+  player2: { joined:false, ships:[], hits:[], misses:[] },
+  turn:1,
+  status:"placing",
+  countdown: null
+});
+  alert("Room Created! Room Code: " + roomCode);
+  enterGame();
+}
+
+function joinRoom() {
+  roomCode = document.getElementById("roomInput").value.trim().toUpperCase();
+  if(!roomCode){ alert("Enter a room code."); return; }
+  const roomRef = database.ref("rooms/" + roomCode);
+  roomRef.once("value").then(snapshot=>{
+    if(!snapshot.exists()){ alert("Room does not exist."); return; }
+    if(snapshot.val().player2.joined){ alert("Room is full."); return; }
+    playerNum = 2;
+    roomRef.update({ "player2/joined":true });
+    enterGame();
+  });
+}
+
+/* ===================== ENTER GAME ===================== */
+function enterGame(){
+  document.getElementById("lobby").style.display="none";
+  document.getElementById("game").style.display="block";
+  createGrid();
+  listenRoomUpdates();
+}
+
+/* ===================== GRID & SHIP PLACEMENT ===================== */
+function createGrid(){
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  for(let y=5;y>=-5;y--){
+    for(let x=-5;x<=5;x++){
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.x = x;
+      cell.dataset.y = y;
+      cell.addEventListener("click",()=>handleCellClick(x,y,cell));
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function handleCellClick(x,y,cell){
+  if(gameStatus !== "placing") return;
+
+  if(myShips.length < maxShips){
+    if(myShips.some(s=>s[0]===x && s[1]===y)) return;
+    myShips.push([x,y]);
+    cell.classList.add("ship");
+    database.ref(`rooms/${roomCode}/player${playerNum}/ships`).set(myShips);
+    if(myShips.length === maxShips) checkReady();
+  }
+}
+
+/* ===================== CHECK READY & START BATTLE ===================== */
+function startCountdown(){
+  const roomRef = database.ref(`rooms/${roomCode}`);
+
+  const interval = setInterval(()=>{
+    roomRef.once("value").then(snapshot=>{
+      const room = snapshot.val();
+      if(!room || room.status !== "confirming"){
+        clearInterval(interval);
+        return;
+      }
+
+      if(room.countdown <= 0){
+        roomRef.update({
+          status: "battle",
+          countdown: null,
+          turn: 1
+        });
+        clearInterval(interval);
+      } else {
+        roomRef.update({
+          countdown: room.countdown - 1
+        });
+      }
+    });
+  }, 1000);
+}
+
+/* ===================== LISTEN FOR UPDATES ===================== */
+function listenRoomUpdates(){
+  const roomRef = database.ref(`rooms/${roomCode}`);
+  roomRef.on("value", snapshot=>{
+    const room = snapshot.val();
+    if(!room) return;
+
+    gameStatus = room.status;
+    turn = room.turn;
+
+   const opponentNum = playerNum === 1 ? 2 : 1;
+   opponentShips = room[`player${opponentNum}`].ships || [];
+
+    updateGrid(room);
+    updateStatusText();
+  });
+}
+
+/* ===================== GRID UPDATES ===================== */
+function updateGrid(room){
+  const cells = document.querySelectorAll(".cell");
+  const playerData = room[`player${playerNum}`];
+
+  cells.forEach(cell=>{
+    const x = parseInt(cell.dataset.x);
+    const y = parseInt(cell.dataset.y);
+
+    cell.classList.remove("hit","miss");
+
+    if(playerData.hits.some(h=>h[0]===x && h[1]===y)) cell.classList.add("hit");
+    if(playerData.misses && playerData.misses.some(m=>m[0]===x && m[1]===y)) cell.classList.add("miss");
+  });
+}
+
+/* ===================== STATUS TEXT ===================== */
+function updateStatusText(){
+  const roomRef = database.ref(`rooms/${roomCode}`);
+  roomRef.once("value").then(snapshot=>{
+    const room = snapshot.val();
+    if(room.status==="placing"){
+      document.getElementById("statusText").textContent = "Place your 4 ships";
+    } else if(room.status==="battle"){
+      if(room.turn===playerNum) document.getElementById("statusText").textContent = "Your turn to attack!";
+      else document.getElementById("statusText").textContent = "Opponent's turn, please wait...";
+    } else if(room.status==="finished"){
+      document.getElementById("statusText").textContent = `Player ${room.winner} wins!`;
+      document.getElementById("restartBtn").style.display="block";
+    }
+    if(room.status === "confirming"){
+  document.getElementById("statusText").textContent =
+    `Confirming ship placement... Game starts in ${room.countdown}s`;
+  });
+}
+
+/* ===================== ATTACK PHASE ===================== */
+document.getElementById("grid").addEventListener("click", e=>{
+  if(gameStatus!=="battle") return;
+  const cell = e.target;
+  if(!cell.classList.contains("cell")) return;
+
+  const x = parseInt(cell.dataset.x);
+  const y = parseInt(cell.dataset.y);
+
+  const roomRef = database.ref(`rooms/${roomCode}`);
+  roomRef.once("value").then(snapshot=>{
+    const room = snapshot.val();
+    const opponentNum = playerNum===1?2:1;
+
+    if(room.turn !== playerNum){
+      alert("Not your turn!");
+      return;
+    }
+    if(room[`player${opponentNum}`].ships.length < maxShips){
+      alert("Opponent has not finished placing ships.");
+      return;
+    }
+
+    attackPoints.push([x,y]);
+    if(attackPoints.length===2){
+      performAttack(attackPoints);
+      attackPoints=[];
+    }
+  });
+});
+
+function performAttack(points){
+  const [p1,p2] = points;
+  const slope = (p2[1]-p1[1])/(p2[0]-p1[0] || 1e-6); // avoid division by 0
+  const b = p1[1]-slope*p1[0];
+
+  const opponentNum = playerNum===1?2:1;
+  const roomRef = database.ref(`rooms/${roomCode}`);
+
+  roomRef.once("value").then(snapshot=>{
+    const room = snapshot.val();
+    let hits = room[`player${playerNum}`].hits || [];
+    let misses = room[`player${playerNum}`].misses || [];
+    let hitAny = false;
+
+    opponentShips.forEach(ship=>{
+      if(Math.abs(ship[1] - (slope*ship[0]+b)) < 0.01){ // approximate float comparison
+        if(!hits.some(h=>h[0]===ship[0] && h[1]===ship[1])){
+          hits.push(ship);
+          hitAny = true;
+        }
+      }
+    });
+
+    if(!hitAny) misses.push(p1);
+
+    let winner = null;
+    if(hits.length >= maxShips){
+      winner = playerNum;
+      roomRef.update({ status:"finished", winner });
+      return;
+    }
+
+    roomRef.update({
+      [`player${playerNum}/hits`]: hits,
+      [`player${playerNum}/misses`]: misses,
+      turn: turn===1?2:1
+    });
+  });
+}
+
+/* ===================== RESTART / REMATCH ===================== */
+function restartGame(){
+  const roomRef = database.ref(`rooms/${roomCode}`);
+  roomRef.update({
+    status:"placing",
+    turn:1,
+    player1:{joined:true, ships:[], hits:[], misses:[]},
+    player2:{joined:true, ships:[], hits:[], misses:[]}
+  });
+  myShips=[];
+  attackPoints=[];
+  document.getElementById("restartBtn").style.display="none";
+  document.getElementById("statusText").textContent="Place your 4 ships";
+  createGrid();
+}
+</script>
+
+</body>
+</html>
