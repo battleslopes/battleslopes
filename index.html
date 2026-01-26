@@ -1,0 +1,1114 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Battle-Slopes</title>
+
+  <!-- Firebase App (core) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+
+<!-- Firebase Realtime Database -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+
+  <style>
+  * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+body { margin: 0; min-height: 100vh; display: flex; justify-content: center; background: linear-gradient(135deg,#1e3c72,#2a5298); color: white; overflow-y: auto; }
+.container {
+  max-width: 800px;
+  width: 90%;
+  padding: 30px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+h1 { font-size: 3rem; margin-bottom: 10px; }
+.subtitle { font-size: 1.1rem; margin-bottom: 30px; opacity: 0.9; }
+
+.card {
+  background: rgba(255,255,255,0.12);
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto 20px;
+}
+
+button, input {
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  margin-top: 10px;
+}
+
+button { background: #ff9800; color: white; cursor: pointer; }
+button:hover { background: #fb8c00; }
+
+.divider { margin: 15px 0; font-weight: bold; opacity: 0.8; }
+hr { margin: 40px 0; border: 1px solid rgba(255,255,255,0.2); }
+p { text-align: justify; line-height: 1.6; }
+a { color: #ffd54f; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.footer { margin-top: 30px; font-size: 0.85rem; opacity: 0.7; }
+
+/* ======== SVG GRID ======== */
+#plane {
+  width: 100%;     /* fill container width */
+  height: auto;    /* scale height automatically */
+  max-width: 400px;
+  aspect-ratio: 1 / 1; /* keep it square */
+  display: block;
+  margin: 20px auto;
+}
+/* ======== MOBILE ======== */
+@media (max-width: 600px) {
+  .container { width: 95%; padding: 15px; }
+  h1 { font-size: 2rem; }
+  .subtitle { font-size: 1rem; }
+  .card { padding: 20px; }
+  button, input { font-size: 0.9rem; padding: 10px; }
+}
+
+   /* WIN FLASH EFFECT */
+@keyframes winFlash {
+  0%   { background-color: rgba(255,255,255,0); }
+  25%  { background-color: rgba(255,215,0,0.4); }
+  50%  { background-color: rgba(255,255,255,0); }
+  75%  { background-color: rgba(255,215,0,0.4); }
+  100% { background-color: rgba(255,255,255,0); }
+}
+
+.win-flash {
+  animation: winFlash 1.2s ease-in-out 3;
+}
+
+/* WIN POP EFFECT */
+@keyframes winPop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.win-pop {
+  animation: winPop 0.6s ease-in-out 3;
+}
+
+
+@keyframes fall {
+  to {
+    transform: translateY(110vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+.confetti {
+  position: fixed;
+  top: -10px;
+  width: 10px;
+  height: 10px;
+  z-index: 9999;
+  pointer-events: none;
+  animation: confettiFall linear forwards;
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+#enableSoundIcon {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  font-size: 2rem;
+  color: white;
+  cursor: pointer;
+  z-index: 10; /* Ensure the icon is above other elements */
+  transition: color 0.3s ease;
+}
+
+#enableSoundIcon:hover {
+  color: #ff9800; /* Change color on hover */
+}
+
+.notification {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(255, 0, 0, 0.7);
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  display: none;  /* Hidden by default */
+}
+
+}
+
+
+
+
+.win-animation {
+  animation: winFlash 1s ease-in-out 3;
+}
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>🎯 Battle-Slopes</h1>
+  <p class="subtitle" style="text-align: center;">A Two-Player Math Strategy Game<br>Coordinate Geometry • Slopes • Logic </p>
+
+
+  <!-- Lobby -->
+<!-- LOBBY BUTTONS -->
+<div class="card" id="lobby">
+  <button id="createRoomBtn">Create Room</button>
+  <div class="divider">OR</div>
+  <input type="text" id="roomInput" placeholder="Enter Room Code">
+  <button id="joinRoomBtn">Join Room</button>
+</div>
+
+  <!-- Game -->
+  <div class="card" id="game" style="display:none;">
+    <p id="roomCodeDisplay" style="font-size:1.2rem; margin-bottom:10px;">
+  Room Code: <b id="roomCodeText"></b>
+</p>
+    <p id="countdownDisplay" style="font-size:1.3rem;font-weight:bold;"></p>
+    <p id="timerText" style="font-size:1.1rem; font-weight:bold;"></p>
+    <p id="statusText">Place your 4 ships</p>
+    <svg id="plane" width="400" height="400"></svg>
+    <input type="text" id="slopeInput" placeholder="Enter slope formula (e.g. y = mx + b)" style="display:none;">
+    <button onclick="attackWithSlope()" id="attackButton" style="display:none;">Attack with slope</button>
+    <button onclick="handleRestartButtonClick()" id="restartBtn" style="display:none;">Restart / Rematch</button>
+  </div>
+
+  <hr>
+
+  <p><b>All About Battle-Slopes</b></p>
+  <p>
+    Battle-Slopes is an interactive two-player game where players plot ships on a Cartesian grid
+    and attack by forming linear equations using slope and coordinates.
+  </p>
+
+  <p> The project <b>Battle-Slopes</b> is an interactive, two-player, web-based educational game inspired by the classic <a href="https://en.wikipedia.org/wiki/Battleship" target="_blank">Battleship</a>. Players strategically plot ships on a Cartesian plane and attack by forming linear equations using slope and coordinate pairs. </p>
+
+  <p class="footer">© 2026 Battle-Slopes | Math Meets Strategy</p>
+</div>
+
+<script>
+/* ===================== FIREBASE CONFIG ===================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyAVKLWoek9nvjO2qzUKHwRrMhqpsjaDiG8",
+  authDomain: "battle-slopes.firebaseapp.com",
+  databaseURL: "https://battle-slopes-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "battle-slopes",
+  storageBucket: "battle-slopes.firebasestorage.app",
+  messagingSenderId: "328801882779",
+  appId: "1:328801882779:web:c2037289a355dd3733ec3e",
+  measurementId: "G-0N95P20HTE"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+database.ref(".info/connected").on("value", snap => {
+console.log("Firebase connected: " + snap.val());
+});
+
+/* ===================== GAME VARIABLES ===================== */
+let roomCode = null;
+let playerNum;
+let myShips = [];
+let opponentShips = [];
+let turn = 1;
+let maxShips = 4;
+let status = "placing"; // placing -> battle -> finished
+let attackPoints = [];
+let turnTimer = null;
+let timeLeft = 20;
+let roomRef;
+let restartLock = false;
+
+/* ===================== ROOM FUNCTIONS ===================== */
+function generateRoomCode() {
+  return "BS-" + Math.random().toString(36).substr(2,4).toUpperCase();
+}
+
+function createRoom() {
+    roomCode = generateRoomCode();
+    roomRef = firebase.database().ref("rooms/" + roomCode);
+    playerNum = 1;
+
+    roomRef.set({
+      player1: { joined:true, ships:[], hits:[], misses:[], usedEquations:[], restartClicked: false },
+      player2: { joined:false, ships:[], hits:[], misses:[], usedEquations:[], restartClicked: false },
+      turn:1,
+      status:"placing"
+    }).then(() => {
+      document.getElementById("roomCodeText").textContent = roomCode;
+      enterGame();
+    });
+  }
+
+
+function joinRoom() {
+    roomCode = document.getElementById("roomInput").value.trim().toUpperCase();
+    if(!roomCode) return alert("Enter a room code.");
+
+    roomRef = firebase.database().ref("rooms/" + roomCode);
+    roomRef.once("value").then(snapshot => {
+      const room = snapshot.val();
+      if(!room) return alert("Room does not exist.");
+      if(room.player2 && room.player2.joined) return alert("Room is full.");
+
+      playerNum = 2;
+      roomRef.update({ "player2/joined": true }).then(() => {
+        document.getElementById("roomCodeText").textContent = roomCode;
+        enterGame();
+      });
+    });
+  }
+
+/* ===================== ENTER GAME ===================== */
+  function enterGame() {
+    document.getElementById("lobby").style.display = "none";
+    document.getElementById("game").style.display = "block";
+    createGrid();
+    listenRoomUpdates();
+    listenRestartUpdates();
+  }
+
+function playWinAnimation() {
+  document.body.classList.add("win-flash");
+  document.querySelector(".container")?.classList.add("win-pop");
+
+  setTimeout(() => {
+    document.body.classList.remove("win-flash");
+    document.querySelector(".container")?.classList.remove("win-pop");
+  }, 4000);
+}
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("createRoomBtn").addEventListener("click", createRoom);
+    document.getElementById("joinRoomBtn").addEventListener("click", joinRoom);
+  });
+
+/* ===================== GRID & SHIP PLACEMENT ===================== */
+const svg = document.getElementById("plane");
+
+// Keep track of drawn elements
+let drawnShips = new Map(); // key: "x,y" => circle
+let drawnHits = new Map();
+let drawnMisses = new Map();
+let attackLineElement = null;
+
+// Create grid once
+function createGrid() {
+  const svgWidth = svg.clientWidth;        // actual width on screen
+  const GRID_SIZE = svgWidth;              // square grid
+  const STEP = GRID_SIZE / 10;            // 10x10 grid
+  const CENTER = GRID_SIZE / 2;
+
+  svg.innerHTML = "";
+
+  // Vertical & horizontal lines
+  for (let i = 0; i <= GRID_SIZE; i += STEP) {
+    const vLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    vLine.setAttribute("x1", i);
+    vLine.setAttribute("y1", 0);
+    vLine.setAttribute("x2", i);
+    vLine.setAttribute("y2", GRID_SIZE);
+    vLine.setAttribute("stroke", "rgba(255,255,255,0.3)");
+    svg.appendChild(vLine);
+
+    const hLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    hLine.setAttribute("x1", 0);
+    hLine.setAttribute("y1", i);
+    hLine.setAttribute("x2", GRID_SIZE);
+    hLine.setAttribute("y2", i);
+    hLine.setAttribute("stroke", "rgba(255,255,255,0.3)");
+    svg.appendChild(hLine);
+  }
+
+  // Axes
+  const xAxis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  xAxis.setAttribute("x1", 0);
+  xAxis.setAttribute("y1", CENTER);
+  xAxis.setAttribute("x2", GRID_SIZE);
+  xAxis.setAttribute("y2", CENTER);
+  xAxis.setAttribute("stroke", "white");
+  xAxis.setAttribute("stroke-width", 2);
+  svg.appendChild(xAxis);
+
+  const yAxis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  yAxis.setAttribute("x1", CENTER);
+  yAxis.setAttribute("y1", 0);
+  yAxis.setAttribute("x2", CENTER);
+  yAxis.setAttribute("y2", GRID_SIZE);
+  yAxis.setAttribute("stroke", "white");
+  yAxis.setAttribute("stroke-width", 2);
+  svg.appendChild(yAxis);
+
+  // Store values for later use in drawing ships / lines
+  svg.dataset.gridSize = GRID_SIZE;
+  svg.dataset.step = STEP;
+  svg.dataset.center = CENTER;
+
+  // Add click listener once
+  if (!svg.dataset.listenerAdded) {
+    svg.addEventListener("click", e => {
+      const rect = svg.getBoundingClientRect();
+      const CENTER = parseFloat(svg.dataset.center);
+      const STEP = parseFloat(svg.dataset.step);
+      const x = Math.round((e.clientX - rect.left - CENTER) / STEP);
+      const y = Math.round((CENTER - (e.clientY - rect.top)) / STEP);
+      handlePlaneClick(x, y);
+    });
+    svg.dataset.listenerAdded = "true";
+  }
+}
+
+
+function handlePlaneClick(x, y) {
+  if (status !== "placing") return;
+  if (myShips.length >= maxShips) return;
+  if (myShips.some(s => s[0] === x && s[1] === y)) return;
+
+  myShips.push([x, y]);
+  drawPoint(x, y, "#4caf50");  // Now works correctly
+
+  if (roomRef) {
+    database.ref(`rooms/${roomCode}/player${playerNum}/ships`).set(myShips);
+  }
+
+  checkReady(); // Check if both players are ready
+}
+
+
+function handleCellClick(x,y,cell){
+  if(status !== "placing") return;
+}
+/* ===================== CHECK READY & START BATTLE ===================== */
+function startCountdown(){
+  const roomRef = database.ref(`rooms/${roomCode}`);
+
+  const interval = setInterval(()=>{
+    roomRef.once("value").then(snapshot=>{
+      const room = snapshot.val();
+      if(!room || room.status !== "confirming"){
+        clearInterval(interval);
+        return;
+      }
+
+      if(room.countdown <= 0){
+        roomRef.update({
+          status: "battle",
+          countdown: null,
+          turn: 1
+        });
+        clearInterval(interval);
+      } else {
+        roomRef.update({
+          countdown: room.countdown - 1
+        });
+      }
+    });
+  }, 1000);
+}
+function checkReady(){
+  const roomRef = database.ref(`rooms/${roomCode}`);
+
+  roomRef.once("value").then(snapshot=>{
+    const room = snapshot.val();
+    if(!room) return;
+
+    const ready1 = room.player1.ships.length === maxShips;
+    const ready2 = room.player2 && room.player2.ships && room.player2.ships.length === maxShips;
+
+    if (
+  playerNum === 1 &&
+  ready1 &&
+  ready2 &&
+  room.status === "placing"
+) {
+      roomRef.update({
+        status: "confirming",
+        countdown: 10
+      });
+      startCountdown();
+    } else {
+      document.getElementById("statusText").textContent =
+        "Waiting for opponent to place ships...";
+    }
+  });
+}
+
+function startTurnTimer() {
+  if (turnTimer) return;
+
+  timeLeft = 20;
+  updateTimerText();
+
+  turnTimer = setInterval(() => {
+    timeLeft--;
+    updateTimerText();
+
+    if (timeLeft <= 0) {
+      clearInterval(turnTimer);
+      turnTimer = null;
+      forceEndTurn();
+    }
+  }, 1000);
+}
+
+
+function updateTimerText() {
+  document.getElementById("timerText").textContent =
+    `⏳ Time left: ${timeLeft}s`;
+}
+
+function forceEndTurn() {
+  alert("⏰ Time's up! Turn skipped.");
+
+  const roomRef = database.ref(`rooms/${roomCode}`);
+  roomRef.once("value").then(snapshot => {
+    const room = snapshot.val();
+    if (!room || room.status !== "battle") return;
+
+    roomRef.update({
+      turn: room.turn === 1 ? 2 : 1
+    });
+  });
+}
+
+function launchConfetti() {
+  const colors = ["#ff5252", "#ffeb3b", "#4caf50", "#2196f3", "#e040fb"];
+
+  for (let i = 0; i < 120; i++) {
+    const confetti = document.createElement("div");
+    confetti.className = "confetti";
+
+    confetti.style.left = Math.random() * 100 + "vw";
+    confetti.style.backgroundColor =
+      colors[Math.floor(Math.random() * colors.length)];
+    confetti.style.animationDuration = (2 + Math.random() * 3) + "s";
+    confetti.style.width = confetti.style.height =
+      6 + Math.random() * 8 + "px";
+
+    document.body.appendChild(confetti);
+
+    setTimeout(() => confetti.remove(), 5000);
+  }
+}
+
+
+/* ===================== LISTEN FOR UPDATES ===================== */
+function listenRoomUpdates() {
+  const roomRef = database.ref(`rooms/${roomCode}`);
+  roomRef.on("value", snapshot => {
+    const room = snapshot.val();
+    if (!room) return;
+
+    status = room.status;
+    turn = room.turn;
+
+    const opponentNum = playerNum === 1 ? 2 : 1;
+    opponentShips = room[`player${opponentNum}`].ships || [];
+
+    // ✅ NEW: automatically start countdown when both players ready
+    const ready1 = room.player1.ships.length === maxShips;
+    const ready2 = room.player2 && room.player2.ships && room.player2.ships.length === maxShips;
+
+    if (room.status === "placing" && ready1 && ready2) {
+      roomRef.update({ status: "confirming", countdown: 10 });
+      startCountdown();
+    }
+
+    updateGrid(room);        // redraw ships, hits, misses
+    updateStatusText(room);  // update status text/UI
+  });
+}
+
+
+/* ===================== UPDATE GRID ===================== */
+function updateGrid(room) {
+  const opponentNum = playerNum === 1 ? 2 : 1;
+  const opponentShips = room[`player${opponentNum}`]?.ships || [];
+
+  // Draw ships
+  myShips.forEach(([x, y]) => {
+    const key = `${x},${y}`;
+    if (!drawnShips.has(key)) {
+      drawnShips.set(key, drawCircle(x, y, "#4caf50"));
+    }
+  });
+
+  // Draw hits
+  const hits = room[`player${playerNum}`]?.hits || [];
+  hits.forEach(([x, y]) => {
+    const key = `${x},${y}`;
+    if (!drawnHits.has(key)) {
+      drawnHits.set(key, drawCircle(x, y, "red"));
+    }
+  });
+
+  // Draw misses (lines)
+  const misses = room[`player${playerNum}`]?.misses || [];
+  misses.forEach(m => {
+    if (m[0] === "line") {
+      const lineKey = `line-${m[1]}-${m[2]}`;
+      if (!drawnMisses.has(lineKey)) {
+        drawnMisses.set(lineKey, drawAttackLine(m[1], m[2], "#999"));
+      }
+    }
+  });
+
+  // Draw opponent hits on your ships
+  const opponentHits = room[`player${opponentNum}`]?.hits || [];
+  opponentHits.forEach(([x, y]) => {
+    if (myShips.some(s => s[0] === x && s[1] === y)) {
+      const key = `hit-${x},${y}`;
+      if (!drawnHits.has(key)) {
+        drawnHits.set(key, drawCircle(x, y, "orange"));
+      }
+    }
+  });
+}
+
+
+/* ===================== DRAW POINT ===================== */
+function drawPoint(x, y, color) {
+  const GRID_SIZE = parseFloat(svg.dataset.gridSize);
+  const STEP = parseFloat(svg.dataset.step);
+  const CENTER = parseFloat(svg.dataset.center);
+
+  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  circle.setAttribute("cx", CENTER + x * STEP);
+  circle.setAttribute("cy", CENTER - y * STEP);
+  circle.setAttribute("r", STEP / 6);  // scale circle size with grid
+  circle.setAttribute("fill", color);
+  svg.appendChild(circle);
+}
+function drawCircle(x, y, color) {
+  const GRID_SIZE = parseFloat(svg.dataset.gridSize);
+  const STEP = parseFloat(svg.dataset.step);
+  const CENTER = parseFloat(svg.dataset.center);
+
+  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  circle.setAttribute("cx", CENTER + x * STEP);
+  circle.setAttribute("cy", CENTER - y * STEP);
+  circle.setAttribute("r", STEP / 6);  // scale circle size with grid
+  circle.setAttribute("fill", color);
+  svg.appendChild(circle);
+  return circle;
+}
+
+
+/* ===================== STATUS TEXT ===================== */
+function updateStatusText(room) {
+  const statusText = document.getElementById("statusText");
+  const slopeInput = document.getElementById("slopeInput");
+  const attackButton = document.getElementById("attackButton");
+  const restartBtn = document.getElementById("restartBtn");
+  const timerText = document.getElementById("timerText");
+
+  // Reset UI first (prevents leftovers)
+  slopeInput.style.display = "none";
+  attackButton.style.display = "none";
+  restartBtn.style.display = "none";
+
+  if (room.status === "placing") {
+    statusText.textContent = "Place your 4 ships";
+    timerText.textContent = "";
+    clearInterval(turnTimer);
+    return;
+  }
+
+  if (room.status === "confirming") {
+    statusText.textContent =
+      `Confirming ship placement… Game starts in ${room.countdown}s`;
+    timerText.textContent = "";
+    clearInterval(turnTimer);
+    return;
+  }
+
+  if (room.status === "battle") {
+    if (room.turn === playerNum) {
+      statusText.textContent = "🎯 Your turn! Enter a slope to attack.";
+      slopeInput.style.display = "block";
+      attackButton.style.display = "block";
+
+      // Start timer ONLY if not already running
+      if (!turnTimer) startTurnTimer();
+    } else {
+      statusText.textContent = "⏳ Opponent's turn, please wait…";
+      timerText.textContent = "";
+      clearInterval(turnTimer);
+      turnTimer = null;
+    }
+    return;
+  }
+
+  if (room.status === "finished") {
+    clearInterval(turnTimer);
+    turnTimer = null;
+    timerText.textContent = "";
+
+    if (room.winner === playerNum) {
+      statusText.textContent = "🎉 You win!";
+    } else {
+      statusText.textContent = "💥 You lost! Better luck next time.";
+    }
+
+    restartBtn.style.display = "block";
+  }
+
+  if (room.status === "countdown") {
+  statusText.textContent =
+    `🔁 Restarting in ${room.restartTimer}s...`;
+  slopeInput.style.display = "none";
+  attackButton.style.display = "none";
+  restartBtn.style.display = "none";
+  timerText.textContent = "";
+  return;
+}
+
+}
+
+
+/* ===================== ATTACK PHASE - SLOPE FORMULA ===================== */
+function attackWithSlope() {
+  console.log("Attack button clicked");  // Debugging log
+
+  const formula = document.getElementById("slopeInput").value.trim();
+  console.log("Entered formula:", formula);  // Debugging log
+
+  if (status !== "battle") {
+    console.log("Not in battle state, returning...");  // Debugging log
+    return;
+  }
+
+   if (!formula) {
+    alert("Please enter a valid slope formula.");
+    return;
+  }
+  // 🔊 Play a neutral click / attack sound immediately
+  playSound("turnSound"); // or hitSound placeholder
+
+  const roomRef = database.ref(`rooms/${roomCode}`);
+  roomRef.once("value").then(snapshot => {
+    const room = snapshot.val();
+    const opponentNum = playerNum === 1 ? 2 : 1;
+
+    if (room.turn !== playerNum) {
+      alert("It's not your turn!");
+      return;
+    }
+
+    if (room[`player${opponentNum}`].ships.length < maxShips) {
+      alert("Opponent has not finished placing ships.");
+      return;
+    }
+
+    // Parse the slope formula
+    const [slopeMatch, slope, intercept] = parseSlopeFormula(formula);
+    console.log("Parsed slope:", slope, "Parsed intercept:", intercept);  // Debugging log
+
+    if (slopeMatch && slope !== undefined) {
+      performAttackWithSlope(slope, intercept);
+    } else {
+      alert("Invalid slope formula! Ensure the formula is in the format 'y = mx + b'.");
+    }
+  });
+}
+
+/* ===================== SLOPE FORMULA PARSER ===================== */
+function parseSlopeFormula(formula) {
+  formula = formula.replace(/\s+/g, "");
+
+const match = formula.match(/^y\s*=\s*([+-]?\d*\/?\d*)x\s*([+-]?\d+\/?\d*)?$/i);
+
+  if (!match) return [false, null, null];
+
+  let m = match[1];
+  let b = match[2];
+
+  // slope
+  if (m === "" || m === "+") m = 1;
+  else if (m === "-") m = -1;
+  else m = parseFraction(m);
+
+  // intercept
+  b = b ? parseFraction(b) : 0;
+
+  return [true, m, b];
+}
+
+
+// Helper function to parse fractions like "2/3" or whole numbers like "3"
+function parseFraction(fraction) {
+  // If it's a fraction (e.g., "2/3"), split and divide
+  if (fraction.includes("/")) {
+    const parts = fraction.split("/").map(num => parseFloat(num.trim()));
+    return parts[0] / parts[1];
+  }
+  
+  // If it's a whole number, just return it as a float
+  return parseFloat(fraction);
+}
+
+const soundPool = {};
+
+function playSound(id) {
+  const src = document.getElementById(id)?.querySelector("source")?.src;
+  if (!src) return;
+
+  // Create a fresh audio instance every time
+  const audio = new Audio(src);
+  audio.volume = 1;
+  audio.play().catch(() => {});
+}
+
+
+/* ===================== ATTACK WITH SLOPE ===================== */
+// In the attack function, only mark the ship as "hit" without removing it from the ships array
+function performAttackWithSlope(slope, intercept) {
+  const roomRef = database.ref(`rooms/${roomCode}`);
+  const opponentNum = playerNum === 1 ? 2 : 1;
+
+  roomRef.once("value").then(snapshot => {
+    const room = snapshot.val();
+    if (!room || room.status !== "battle") return;
+
+    // 🚫 Not your turn
+    if (room.turn !== playerNum) {
+      alert("It's not your turn!");
+      return;
+    }
+
+    let opponentShips = room[`player${opponentNum}`].ships || [];
+    let hits = room[`player${playerNum}`].hits || [];
+    let misses = room[`player${playerNum}`].misses || [];
+    let usedEquations = room[`player${playerNum}`].usedEquations || [];
+
+    // 🔁 Normalize equation to prevent duplicates
+    const equationKey = `y=${slope.toFixed(4)}x+${intercept.toFixed(4)}`;
+
+    // 🚫 Reused equation → NO TURN LOSS
+    if (usedEquations.includes(equationKey)) {
+      alert("⚠️ You already used this equation!");
+      return;
+    }
+
+    usedEquations.push(equationKey);
+
+    let hitCount = 0;
+    const tolerance = 0.01;
+
+    // 🎯 Visual attack
+    clearAttackLine();
+    drawAttackLine(slope, intercept);
+
+    // 🎯 Hit detection
+    opponentShips.forEach(([x, y]) => {
+      const expectedY = slope * x + intercept;
+      if (Math.abs(y - expectedY) < tolerance) {
+        if (!hits.some(h => h[0] === x && h[1] === y)) {
+          hits.push([x, y]);
+          hitCount++;
+        }
+      }
+    });
+
+    const soundToPlay = hitCount === 0 ? "missSound" : "hitSound";
+    playSound(soundToPlay);
+
+    // 🏆 WIN CHECK
+    const totalOpponentShips = opponentShips.length;
+    const totalHits = hits.length;
+
+    // 🔁 Switch turn AFTER valid attack
+    const nextTurn = room.turn === 1 ? 2 : 1;
+
+    const updateData = {
+      [`player${playerNum}/hits`]: hits,
+      [`player${playerNum}/misses`]: misses,
+      [`player${playerNum}/usedEquations`]: usedEquations,
+      turn: nextTurn
+    };
+
+    // 🏁 Game over
+    if (totalHits >= totalOpponentShips && totalOpponentShips > 0) {
+       playSound("winSound");
+      updateData.status = "finished";
+      updateData.winner = playerNum;
+      updateData.turn = null;
+
+     
+      playWinAnimation();
+      launchConfetti();
+      clearInterval(turnTimer);
+      document.getElementById("timerText").textContent = "";
+
+
+    document.getElementById("statusText").textContent =
+  `🎉 You win!`;
+    } else {
+      playSound("turnSound");
+      startTurnTimer();
+    }
+
+    roomRef.update(updateData);
+  });
+}
+
+
+
+
+  /* ===================== DRAW THE ATTACK LINE ===================== */
+ function drawAttackLine(slope, intercept, color = "#ff9800") {
+  if (attackLineElement) attackLineElement.remove();
+
+  const GRID_SIZE = parseFloat(svg.dataset.gridSize);
+  const STEP = parseFloat(svg.dataset.step);
+  const CENTER = parseFloat(svg.dataset.center);
+
+  const xMin = -Math.floor(CENTER / STEP);
+  const xMax = Math.floor(CENTER / STEP);
+
+  const y1 = slope * xMin + intercept;
+  const y2 = slope * xMax + intercept;
+
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  line.setAttribute("x1", CENTER + xMin * STEP);
+  line.setAttribute("y1", CENTER - y1 * STEP);
+  line.setAttribute("x2", CENTER + xMax * STEP);
+  line.setAttribute("y2", CENTER - y2 * STEP);
+  line.setAttribute("stroke", color);
+  line.setAttribute("stroke-width", STEP / 12); // scale line width
+  svg.appendChild(line);
+
+  attackLineElement = line;
+  return line;
+}
+
+/* ===================== THROTTLED RESIZE ===================== */
+let resizeTimeout;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    createGrid();
+    updateGrid(); // redraw ships & hits efficiently
+  }, 200); // redraw max once per 200ms
+});
+
+// Function to register a hit
+// Example of how a hit might be registered
+function registerHit(playerId, targetPlayerId, targetShipId) {
+  // Assuming you have a system where you store the ships and their positions
+  const playerShipsRef = roomRef.child(targetPlayerId + '/ships');
+  
+  playerShipsRef.once('value', snapshot => {
+    const ships = snapshot.val();
+    
+    // Find the ship that was hit by comparing its coordinates with the attack
+    const ship = ships.find(ship => ship.id === targetShipId);
+    
+    if (ship) {
+      // Ship is hit, update Firebase with the hit status
+      roomRef.child(targetPlayerId).update({
+        hitNotification: `Your ${ship.name} has been hit!`
+      }).then(() => {
+        // Optionally: Notify the player via UI as well
+        showHitNotification(targetPlayerId, ship.name);
+      });
+
+      // Mark the ship as hit
+      roomRef.child(targetPlayerId + '/ships').child(ship.id).update({
+        isHit: true
+      });
+
+      // You can also update the attacker's record if needed (for tracking)
+      roomRef.child(playerId).update({
+        lastHit: `You hit ${targetPlayerId}'s ${ship.name}!`
+      });
+    }
+  });
+}
+
+// Function to display the hit notification
+function showHitNotification(playerId, message) {
+  const notificationElement = document.getElementById(playerId + 'HitNotification');
+  if (notificationElement) {
+    notificationElement.textContent = message;
+    notificationElement.style.display = 'block';  // Show the notification
+    setTimeout(() => {
+      notificationElement.style.display = 'none';  // Hide it after a few seconds
+    }, 5000);  // Hide after 5 seconds
+  }
+}
+
+
+  /* ===================== CLEAR ATTACK LINE ===================== */
+  function clearAttackLine() {
+    const svg = document.getElementById("plane");
+    const existingLine = svg.querySelector('.attack-line');
+    if (existingLine) {
+      existingLine.remove();
+    }
+  }
+/* ===================== RESTART / REMATCH (SELF-CONTAINED) ===================== */
+
+/* SAFE FALLBACK UI FUNCTIONS */
+window.resetGrid = window.resetGrid || function () {};
+window.resetShipPlacementUI = window.resetShipPlacementUI || function () {};
+window.resetHitsAndMissesUI = window.resetHitsAndMissesUI || function () {};
+
+  function handleRestartButtonClick() {
+    if (!roomRef) return;
+    roomRef.child(`player${playerNum}`).update({ restartClicked: true });
+    alert("Waiting for opponent...");
+  }
+
+  function listenRestartUpdates() {
+    if (!roomRef) return;
+
+    roomRef.on("value", snapshot => {
+      const room = snapshot.val();
+      if (!room || room.status !== "finished") return;
+
+      const bothClicked = room.player1.restartClicked && room.player2.restartClicked;
+
+      if (bothClicked && !restartLock) {
+        restartLock = true;
+        startRestartCountdown();
+      }
+    });
+  }
+
+  function startRestartCountdown() {
+    let time = 5;
+    roomRef.update({ status:"countdown", restartTimer: time });
+
+    const interval = setInterval(() => {
+      time--;
+      roomRef.update({ restartTimer: time });
+
+      if (time <= 0) {
+        clearInterval(interval);
+
+        // ✅ Reset Firebase room state safely
+        roomRef.update({
+          "player1/restartClicked": false,
+          "player2/restartClicked": false,
+          restartTimer: null,
+          status: "placing",
+          turn: 1,
+          winner: null,
+          "player1/ships": [],
+          "player1/hits": [],
+          "player1/misses": [],
+          "player1/usedEquations": [],
+          "player2/ships": [],
+          "player2/hits": [],
+          "player2/misses": [],
+          "player2/usedEquations": []
+        });
+
+        restartLock = false;
+
+        // ✅ Reset local state
+        myShips = [];
+        opponentShips = [];
+        status = "placing";
+
+        clearAttackLine();
+        createGrid();
+      }
+    }, 1000);
+  }
+
+// UI helpers
+function showRestartCountdown(time) {
+  const el = document.getElementById("countdownDisplay");
+  if (el) {
+    el.style.display = "block";
+    el.textContent = `Restarting in ${time}...`;
+  }
+}
+
+function hideRestartCountdown() {
+  const el = document.getElementById("countdownDisplay");
+  if (el) {
+    el.style.display = "none";
+    el.textContent = "";
+  }
+}
+
+function toggleRestartButton(status) {
+  const btn = document.getElementById("restartBtn");
+  const countdown = document.getElementById("countdownDisplay");
+
+  if (!btn || !countdown) return;
+
+  if (status === "finished") {
+    btn.style.display = "block";
+    btn.disabled = false;
+    countdown.style.display = "none";
+  } else if (status === "countdown") {
+    btn.style.display = "none";
+    countdown.style.display = "block";
+  } else {
+    btn.style.display = "none";
+    countdown.style.display = "none";
+  }
+}
+
+function enableSound() {
+  ["hitSound","missSound","winSound","turnSound"].forEach(id => {
+    const a = document.getElementById(id);
+    if (!a) return;
+    a.muted = false;
+    a.volume = 1;
+    a.currentTime = 0;
+    a.play().then(() => {
+      a.pause();
+      a.currentTime = 0;
+    });
+  });
+  alert("Sound enabled!");
+}
+
+</script>
+
+<audio id="hitSound" preload="auto">
+  <source src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-explosion-2759.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="missSound" preload="auto">
+  <source src="https://assets.mixkit.co/sfx/preview/mixkit-click-error-1110.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="winSound" preload="auto">
+  <source src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="turnSound" preload="auto">
+  <source src="https://assets.mixkit.co/sfx/preview/mixkit-interface-click-1126.mp3" type="audio/mpeg">
+</audio>
+
+
+
+</body>
+</html>
