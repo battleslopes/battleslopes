@@ -13,187 +13,102 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 
-<style>
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-}
-
-html, body {
-  height: 100%;
-}
-
-body {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center; /* FIXED (was flex-start) */
-  background: radial-gradient(circle at top, #1a2a4f, #0f172a 70%);
-  color: white;
-  overflow: hidden; /* Prevent layout shifting */
-  position: relative;
-}
-
-/* Subtle background texture */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: radial-gradient(white 1px, transparent 1px);
-  background-size: 40px 40px;
-  opacity: 0.03;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Main Container */
+  <style>
+  * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+body { margin: 0; min-height: 100vh; display: flex; justify-content: center; background: linear-gradient(135deg,#1e3c72,#2a5298); color: white; overflow-y: auto; }
 .container {
-  max-width: 850px;
-  width: 92%;
-  padding: 40px 20px;
+  max-width: 800px;
+  width: 90%;
+  padding: 30px;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 2;
-  position: relative;
 }
+h1 { font-size: 3rem; margin-bottom: 10px; }
+.subtitle { font-size: 1.1rem; margin-bottom: 30px; opacity: 0.9; }
 
-/* Title */
-h1 {
-  font-size: 3rem;
-  letter-spacing: 2px;
-  text-shadow: 0 0 25px #00e5ff;
-  margin-bottom: 10px;
-}
-
-/* Subtitle */
-.subtitle {
-  font-size: 1rem;
-  opacity: 0.85;
-  margin-bottom: 35px;
-}
-
-/* Glass Card */
 .card {
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(14px);
-  border-radius: 20px;
+  background: rgba(255,255,255,0.12);
   padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
   width: 100%;
   max-width: 600px;
-  margin-bottom: 25px;
-  border: 1px solid rgba(255,255,255,0.15);
-  box-shadow: 0 0 40px rgba(0,0,0,0.6);
-  transition: transform 0.3s ease;
+  margin: 0 auto 20px;
 }
 
-/* Inputs */
-input {
+button, input {
   width: 100%;
   padding: 12px;
-  border-radius: 12px;
+  font-size: 1rem;
+  border-radius: 8px;
   border: none;
-  margin-top: 12px;
-  font-size: 1rem;
-  background: rgba(255,255,255,0.15);
-  color: white;
-  outline: none;
+  margin-top: 10px;
 }
 
-input::placeholder {
-  color: rgba(255,255,255,0.6);
-}
+button { background: #ff9800; color: white; cursor: pointer; }
+button:hover { background: #fb8c00; }
 
-/* Buttons */
-button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 12px;
-  border-radius: 12px;
-  border: none;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  background: linear-gradient(135deg, #2196f3, #00e5ff);
-  color: white;
-  transition: all 0.2s ease;
-  box-shadow: 0 5px 20px rgba(0,150,255,0.4);
-}
+.divider { margin: 15px 0; font-weight: bold; opacity: 0.8; }
+hr { margin: 40px 0; border: 1px solid rgba(255,255,255,0.2); }
+p { text-align: justify; line-height: 1.6; }
+a { color: #ffd54f; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.footer { margin-top: 30px; font-size: 0.85rem; opacity: 0.7; }
 
-button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(0,150,255,0.6);
-}
-
-button:active {
-  transform: scale(0.96);
-}
-
-/* Status */
-#statusText {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 10px;
-  text-shadow: 0 0 10px rgba(0,200,255,0.6);
-}
-
-#timerText {
-  font-size: 1rem;
-  font-weight: bold;
-  color: #ff5252;
-  margin-bottom: 8px;
-}
-
-#countdownDisplay {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #ffd54f;
-  margin-bottom: 10px;
-}
-
-/* SVG Grid */
+/* ======== SVG GRID ======== */
 #plane {
-  width: 100%;
-  max-width: 420px;
-  aspect-ratio: 1 / 1;
+  width: 100%;     /* fill container width */
+  height: auto;    /* scale height automatically */
+  max-width: 400px;
+  aspect-ratio: 1 / 1; /* keep it square */
+  display: block;
   margin: 20px auto;
-  filter: drop-shadow(0 0 15px rgba(0,255,255,0.5));
-  border-radius: 12px;
+}
+/* ======== MOBILE ======== */
+@media (max-width: 600px) {
+  .container { width: 95%; padding: 15px; }
+  h1 { font-size: 2rem; }
+  .subtitle { font-size: 1rem; }
+  .card { padding: 20px; }
+  button, input { font-size: 0.9rem; padding: 10px; }
 }
 
-/* WIN OVERLAY */
-.win-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(255,215,0,0.2);
-  pointer-events: none;
-  z-index: 9997;
+   /* WIN FLASH EFFECT */
+@keyframes winFlash {
+  0%   { background-color: rgba(255,255,255,0); }
+  25%  { background-color: rgba(255,215,0,0.4); }
+  50%  { background-color: rgba(255,255,255,0); }
+  75%  { background-color: rgba(255,215,0,0.4); }
+  100% { background-color: rgba(255,255,255,0); }
+}
+
+.win-flash {
   animation: winFlash 1.2s ease-in-out 3;
 }
 
-@keyframes winFlash {
-  0%, 100% { opacity: 0; }
-  50% { opacity: 1; }
-}
-
-/* Win Pop Effect */
-.win-pop {
-  animation: winPop 0.6s ease-in-out 3;
-}
-
+/* WIN POP EFFECT */
 @keyframes winPop {
   0%   { transform: scale(1); }
   50%  { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
 
-/* CONFETTI */
+.win-pop {
+  animation: winPop 0.6s ease-in-out 3;
+}
+
+
+@keyframes fall {
+  to {
+    transform: translateY(110vh) rotate(360deg);
+    opacity: 0;
+  }
+}
 .confetti {
   position: fixed;
-  top: -20px;
+  top: -10px;
   width: 10px;
   height: 10px;
   z-index: 9999;
@@ -202,275 +117,95 @@ button:active {
 }
 
 @keyframes confettiFall {
-  from {
+  0% {
     transform: translateY(0) rotate(0deg);
     opacity: 1;
   }
-  to {
-    transform: translateY(120vh) rotate(720deg);
+  100% {
+    transform: translateY(110vh) rotate(720deg);
     opacity: 0;
   }
 }
 
-/* Mobile */
-@media (max-width: 600px) {
-  h1 { font-size: 2.2rem; }
-  .card { padding: 20px; }
-}
-
-/* INSTRUCTIONS BOX */
-.instructions-box {
+#enableSoundIcon {
   position: fixed;
-  top: 20px;
-  left: 20px;
-  width: 320px;
-  max-height: 80vh;
-  overflow-y: auto;
-  padding: 20px;
-  border-radius: 18px;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 229, 255, 0.3);
-  box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
-  font-size: 0.9rem;
-  z-index: 5;
+  top: 10px;
+  right: 10px;
+  font-size: 2rem;
+  color: white;
+  cursor: pointer;
+  z-index: 10; /* Ensure the icon is above other elements */
+  transition: color 0.3s ease;
 }
 
-/* Title */
-.instructions-box h2 {
-  margin-bottom: 12px;
-  font-size: 1.2rem;
-  text-shadow: 0 0 10px #00e5ff;
+#enableSoundIcon:hover {
+  color: #ff9800; /* Change color on hover */
 }
 
-/* List */
-.instructions-box ul {
-  padding-left: 18px;
-  line-height: 1.6;
-}
-
-.instructions-box li {
-  margin-bottom: 8px;
-}
-
-/* Dot indicators */
-.red-dot,
-.yellow-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin: 0 4px;
-}
-
-.red-dot {
-  background: #ff3b3b;
-  box-shadow: 0 0 8px #ff3b3b;
-}
-
-.yellow-dot {
-  background: #ffd54f;
-  box-shadow: 0 0 8px #ffd54f;
-}
-
-/* Scrollbar Styling */
-.instructions-box::-webkit-scrollbar {
-  width: 6px;
-}
-
-.instructions-box::-webkit-scrollbar-thumb {
-  background: rgba(0, 229, 255, 0.5);
-  border-radius: 10px;
-}
-
-/* Mobile Adjustment */
-@media (max-width: 900px) {
-  .instructions-box {
-    position: relative;
-    width: 95%;
-    margin: 0 auto 20px auto;
-    left: 0;
-    top: 0;
-  }
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  margin: 18px 0;
-  color: rgba(255,255,255,0.6);
-  font-weight: 600;
-  letter-spacing: 1px;
-}
-
-.divider::before,
-.divider::after {
-  content: "";
-  flex: 1;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
-}
-
-.divider::before {
-  margin-right: 10px;
-}
-
-.divider::after {
-  margin-left: 10px;
-}
-
-/* RIGHT SIDE STATS PANEL */
-.stats-box {
+.notification {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 280px;
-  max-height: 80vh;
-  overflow-y: auto;
-  padding: 20px;
-  border-radius: 18px;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 229, 255, 0.3);
-  box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
-  font-size: 0.9rem;
-  z-index: 5;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(255, 0, 0, 0.7);
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  display: none;  /* Hidden by default */
 }
 
-.stats-box h2 {
-  margin-bottom: 12px;
-  font-size: 1.2rem;
-  text-shadow: 0 0 10px #00e5ff;
-}
-
-.stats-box ul {
-  margin-top: 8px;
-  padding-left: 16px;
-  font-size: 0.85rem;
-  line-height: 1.4;
-}
-
-/* Mobile fix */
-@media (max-width: 1200px) {
-  .stats-box {
-    position: relative;
-    width: 95%;
-    margin: 20px auto;
-    right: 0;
-    top: 0;
-  }
 }
 
 
-</style>
 
 
+.win-animation {
+  animation: winFlash 1s ease-in-out 3;
+}
+  </style>
 </head>
 
 <body>
 
-<div class="instructions-box">
-  <h2>Instructions</h2>
-  <ul>
-    <li>Place 4 dots in the given Cartesian plane</li>
-    <li>Both players must place 4 dots before the game starts</li>
-    <li>When both players have placed their 4 dots, a countdown will start</li>
-    <li>Once the countdown hits 0, the game will begin</li>
-    <li>Input a slope formula in the format: <strong>y = mx + b</strong></li>
-    <li>You have 20 seconds to input a formula</li>
-    <li>A <span class="red-dot"></span> red dot means you hit a player's dot</li>
-    <li>A <span class="yellow-dot"></span> yellow dot means your dot was hit</li>
-    <li>The game continues until one player hits all opponent dots</li>
-    <li>Players may choose a rematch after the game</li>
-  </ul>
-</div>
-
-<div class="stats-box" id="statsBox" style="display:none;">
-  <h2>Game Stats</h2>
-
-  <p><strong>Your Hits:</strong> <span id="hitCount">0</span></p>
-  <p><strong>Your Misses:</strong> <span id="missCount">0</span></p>
-  <p><strong>Ships Lost:</strong> <span id="shipsLostCount">0</span></p>
-
-  <p><strong>Equations Used:</strong></p>
-  <ul id="equationList"></ul>
-</div>
-
-
 <div class="container">
-
   <h1>🎯 Battle-Slopes</h1>
-  <p class="subtitle">
-    A Two-Player Strategy Game • Coordinate Geometry • Slopes • Logic
-  </p>
+  <p class="subtitle" style="text-align: center;">A Two-Player Math Strategy Game<br>Coordinate Geometry • Slopes • Logic </p>
+
 
   <!-- Lobby -->
-  <div class="card" id="lobby">
-    <button id="createRoomBtn">Create Room</button>
-
-<div class="divider">
-  <span>OR</span>
+<!-- LOBBY BUTTONS -->
+<div class="card" id="lobby">
+  <button id="createRoomBtn">Create Room</button>
+  <div class="divider">OR</div>
+  <input type="text" id="roomInput" placeholder="Enter Room Code">
+  <button id="joinRoomBtn">Join Room</button>
 </div>
-
-    <input type="text" id="roomInput" placeholder="Enter Room Code">
-    <button id="joinRoomBtn">Join Room</button>
-  </div>
 
   <!-- Game -->
   <div class="card" id="game" style="display:none;">
-
-    <p style="margin-bottom:10px;">
-      Room Code: <b id="roomCodeText"></b>
-    </p>
-
-    <p id="countdownDisplay"></p>
-    <p id="timerText"></p>
+    <p id="roomCodeDisplay" style="font-size:1.2rem; margin-bottom:10px;">
+  Room Code: <b id="roomCodeText"></b>
+</p>
+    <p id="countdownDisplay" style="font-size:1.3rem;font-weight:bold;"></p>
+    <p id="timerText" style="font-size:1.1rem; font-weight:bold;"></p>
     <p id="statusText">Place your 4 ships</p>
-
-    <svg id="plane"></svg>
-
-    <input type="text"
-           id="slopeInput"
-           placeholder="Enter slope formula (e.g. y = mx + b)"
-           style="display:none;">
-
-    <button onclick="attackWithSlope()"
-            id="attackButton"
-            style="display:none;">
-      Attack
-    </button>
-
-    <button onclick="handleRestartButtonClick()"
-            id="restartBtn"
-            style="display:none;">
-      Restart / Rematch
-    </button>
-
-    
-
+    <svg id="plane" width="400" height="400"></svg>
+    <input type="text" id="slopeInput" placeholder="Enter slope formula (e.g. y = mx + b)" style="display:none;">
+    <button onclick="attackWithSlope()" id="attackButton" style="display:none;">Attack with slope</button>
+    <button onclick="handleRestartButtonClick()" id="restartBtn" style="display:none;">Restart / Rematch</button>
   </div>
 
-  <div class="info-section">
-    <hr style="margin:40px 0; border:1px solid rgba(255,255,255,0.15);">
+  <hr>
 
-    <p><strong>About Battle-Slopes</strong></p>
+  <p><b>All About Battle-Slopes</b></p>
+  <p>
+    Battle-Slopes is an interactive two-player game where players plot ships on a Cartesian grid
+    and attack by forming linear equations using slope and coordinates.
+  </p>
 
-    <p>
-      Battle-Slopes is a competitive two-player math strategy game
-      inspired by Battleship. Players place ships on a Cartesian plane
-      and attack using linear equations.
-    </p>
+  <p> The project <b>Battle-Slopes</b> is an interactive, two-player, web-based educational game inspired by the classic <a href="https://en.wikipedia.org/wiki/Battleship" target="_blank">Battleship</a>. Players strategically plot ships on a Cartesian plane and attack by forming linear equations using slope and coordinate pairs. </p>
 
-    <p>
-      Victory requires precision, slope mastery, and strategic thinking.
-      Every equation matters.
-    </p>
-
-    <p class="footer">
-      © 2026 Battle-Slopes • Math Meets Strategy
-    </p>
-  </div>
-
+  <p class="footer">© 2026 Battle-Slopes | Math Meets Strategy</p>
 </div>
 
 <script>
@@ -555,20 +290,14 @@ function joinRoom() {
   }
 
 function playWinAnimation() {
-  const overlay = document.createElement("div");
-  overlay.className = "win-overlay";
-  document.body.appendChild(overlay);
-
-  const container = document.querySelector(".container");
-  container?.classList.add("win-pop");
+  document.body.classList.add("win-flash");
+  document.querySelector(".container")?.classList.add("win-pop");
 
   setTimeout(() => {
-    overlay.remove();
-    container?.classList.remove("win-pop");
-  }, 3600);
+    document.body.classList.remove("win-flash");
+    document.querySelector(".container")?.classList.remove("win-pop");
+  }, 4000);
 }
-
-
 
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("createRoomBtn").addEventListener("click", createRoom);
@@ -807,8 +536,7 @@ function listenRoomUpdates() {
     }
 
     updateGrid(room);        // redraw ships, hits, misses
-    updateStatusText(room);
-    updateStatsPanel(room);
+    updateStatusText(room);  // update status text/UI
   });
 }
 
@@ -889,7 +617,6 @@ function drawCircle(x, y, color) {
 
 /* ===================== STATUS TEXT ===================== */
 function updateStatusText(room) {
-  const statsBox = document.getElementById("statsBox");
   const statusText = document.getElementById("statusText");
   const slopeInput = document.getElementById("slopeInput");
   const attackButton = document.getElementById("attackButton");
@@ -905,7 +632,6 @@ function updateStatusText(room) {
     statusText.textContent = "Place your 4 ships";
     timerText.textContent = "";
     clearInterval(turnTimer);
-    if (statsBox) statsBox.style.display = "none";
     return;
   }
 
@@ -914,7 +640,6 @@ function updateStatusText(room) {
       `Confirming ship placement… Game starts in ${room.countdown}s`;
     timerText.textContent = "";
     clearInterval(turnTimer);
-    if (statsBox) statsBox.style.display = "none";
     return;
   }
 
@@ -923,7 +648,6 @@ function updateStatusText(room) {
       statusText.textContent = "🎯 Your turn! Enter a slope to attack.";
       slopeInput.style.display = "block";
       attackButton.style.display = "block";
-      if (statsBox) statsBox.style.display = "block";
 
       // Start timer ONLY if not already running
       if (!turnTimer) startTurnTimer();
@@ -940,7 +664,6 @@ function updateStatusText(room) {
     clearInterval(turnTimer);
     turnTimer = null;
     timerText.textContent = "";
-    if (statsBox) statsBox.style.display = "block";
 
     if (room.winner === playerNum) {
       statusText.textContent = "🎉 You win!";
@@ -1108,11 +831,6 @@ function performAttackWithSlope(slope, intercept) {
       }
     });
 
-    if (hitCount === 0) {
-  misses.push(["line", slope, intercept]);
-}
-
-
     const soundToPlay = hitCount === 0 ? "missSound" : "hitSound";
     playSound(soundToPlay);
 
@@ -1152,38 +870,6 @@ function performAttackWithSlope(slope, intercept) {
     }
 
     roomRef.update(updateData);
-  });
-}
-
-function updateStatsPanel(room) {
-  if (!room) return;
-
-  const opponentNum = playerNum === 1 ? 2 : 1;
-
-  const myHits = room[`player${playerNum}`]?.hits || [];
-  const myMisses = room[`player${playerNum}`]?.misses || [];
-  const opponentHits = room[`player${opponentNum}`]?.hits || [];
-  const usedEquations = room[`player${playerNum}`]?.usedEquations || [];
-
-  // Update basic stats
-  document.getElementById("hitCount").textContent = myHits.length;
-  document.getElementById("missCount").textContent = myMisses.length;
-
-  // Ships lost = opponent's hits that match my ships
-  const shipsLost = opponentHits.filter(([x,y]) =>
-    myShips.some(ship => ship[0] === x && ship[1] === y)
-  );
-
-  document.getElementById("shipsLostCount").textContent = shipsLost.length;
-
-  // Update equation list
-  const equationList = document.getElementById("equationList");
-  equationList.innerHTML = "";
-
-  usedEquations.slice().reverse().forEach(eq => {
-    const li = document.createElement("li");
-    li.textContent = eq;
-    equationList.appendChild(li);
   });
 }
 
@@ -1292,8 +978,7 @@ window.resetHitsAndMissesUI = window.resetHitsAndMissesUI || function () {};
   function handleRestartButtonClick() {
     if (!roomRef) return;
     roomRef.child(`player${playerNum}`).update({ restartClicked: true });
-document.getElementById("statusText").textContent =
-  "⏳ Waiting for opponent to restart...";
+    alert("Waiting for opponent...");
   }
 
   function listenRestartUpdates() {
@@ -1313,54 +998,46 @@ document.getElementById("statusText").textContent =
   }
 
   function startRestartCountdown() {
-  let time = 5;
-  roomRef.update({ status:"countdown", restartTimer: time });
+    let time = 5;
+    roomRef.update({ status:"countdown", restartTimer: time });
 
-  const interval = setInterval(() => {
-    time--;
-    roomRef.update({ restartTimer: time });
+    const interval = setInterval(() => {
+      time--;
+      roomRef.update({ restartTimer: time });
 
-    if (time <= 0) {
-      clearInterval(interval);
+      if (time <= 0) {
+        clearInterval(interval);
 
-      // ✅ Reset Firebase room state safely
-      roomRef.update({
-        "player1/restartClicked": false,
-        "player2/restartClicked": false,
-        restartTimer: null,
-        status: "placing",
-        turn: 1,
-        winner: null,
-        "player1/ships": [],
-        "player1/hits": [],
-        "player1/misses": [],
-        "player1/usedEquations": [],
-        "player2/ships": [],
-        "player2/hits": [],
-        "player2/misses": [],
-        "player2/usedEquations": []
-      });
+        // ✅ Reset Firebase room state safely
+        roomRef.update({
+          "player1/restartClicked": false,
+          "player2/restartClicked": false,
+          restartTimer: null,
+          status: "placing",
+          turn: 1,
+          winner: null,
+          "player1/ships": [],
+          "player1/hits": [],
+          "player1/misses": [],
+          "player1/usedEquations": [],
+          "player2/ships": [],
+          "player2/hits": [],
+          "player2/misses": [],
+          "player2/usedEquations": []
+        });
 
-      restartLock = false;
+        restartLock = false;
 
-      // ✅ Reset local state
-      myShips = [];
-      opponentShips = [];
-      status = "placing";
+        // ✅ Reset local state
+        myShips = [];
+        opponentShips = [];
+        status = "placing";
 
-      // ✅ Reset the UI immediately
-      document.getElementById("statusText").textContent = "Place your 4 ships";
-      document.getElementById("slopeInput").style.display = "none";
-      document.getElementById("attackButton").style.display = "none";
-      document.getElementById("restartBtn").style.display = "none";
-      document.getElementById("countdownDisplay").style.display = "none";
-
-      clearAttackLine();
-      createGrid();
-    }
-  }, 1000);
-}
-
+        clearAttackLine();
+        createGrid();
+      }
+    }, 1000);
+  }
 
 // UI helpers
 function showRestartCountdown(time) {
